@@ -1,84 +1,83 @@
-#include <stdlib.h>
 #include "sort.h"
+#include <stdio.h>
 
 /**
- * get_max - Gets the maximum value in an array
- * @array: Array to get maximum from
- * @size: Size of the array
- * Return: Maximum value
+ * bitonic_compare - Compares and swaps elements based on direction
+ * @array: Array to sort
+ * @i: First index
+ * @j: Second index
+ * @dir: Direction (1 for UP, 0 for DOWN)
  */
-int get_max(int *array, size_t size)
+void bitonic_compare(int *array, size_t i, size_t j, int dir)
 {
-    int max = array[0];
-    size_t i;
+    int temp;
 
-    for (i = 1; i < size; i++)
-        if (array[i] > max)
-            max = array[i];
-    return max;
+    if (dir == (array[i] > array[j]))
+    {
+        temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
 }
 
 /**
- * counting_sort_radix - Performs counting sort on a specific digit
+ * bitonic_merge - Recursively merges bitonic sequences
+ * @array: Array to sort
+ * @low: Starting index
+ * @size: Size of the sequence
+ * @dir: Direction (1 for UP, 0 for DOWN)
+ * @total_size: Total size of the original array
+ */
+void bitonic_merge(int *array, size_t low, size_t size, int dir, size_t total_size)
+{
+    size_t k, i;
+
+    if (size > 1)
+    {
+        k = size / 2;
+        for (i = low; i < low + k; i++)
+            bitonic_compare(array, i, i + k, dir);
+        bitonic_merge(array, low, k, dir, total_size);
+        bitonic_merge(array, low + k, k, dir, total_size);
+    }
+}
+
+/**
+ * bitonic_sequence - Creates and sorts bitonic sequences recursively
+ * @array: Array to sort
+ * @low: Starting index
+ * @size: Size of the sequence
+ * @dir: Direction (1 for UP, 0 for DOWN)
+ * @total_size: Total size of the original array
+ */
+void bitonic_sequence(int *array, size_t low, size_t size, int dir, size_t total_size)
+{
+    size_t k;
+
+    if (size > 1)
+    {
+        k = size / 2;
+        printf("Merging [%lu/%lu] (%s):\n", size, total_size, dir ? "UP" : "DOWN");
+        print_array(array + low, size);
+
+        bitonic_sequence(array, low, k, 1, total_size);
+        bitonic_sequence(array, low + k, k, 0, total_size);
+        bitonic_merge(array, low, size, dir, total_size);
+
+        printf("Result [%lu/%lu] (%s):\n", size, total_size, dir ? "UP" : "DOWN");
+        print_array(array + low, size);
+    }
+}
+
+/**
+ * bitonic_sort - Sorts an array using the bitonic sort algorithm
  * @array: Array to sort
  * @size: Size of the array
- * @exp: Current digit position
  */
-void counting_sort_radix(int *array, size_t size, int exp)
+void bitonic_sort(int *array, size_t size)
 {
-    int *output, *count;
-    size_t i;
-
-    output = malloc(sizeof(int) * size);
-    if (!output)
-        return;
-    count = calloc(10, sizeof(int));
-    if (!count)
-    {
-        free(output);
-        return;
-    }
-
-    /* Count occurrences */
-    for (i = 0; i < size; i++)
-        count[(array[i] / exp) % 10]++;
-
-    /* Calculate cumulative count */
-    for (i = 1; i < 10; i++)
-        count[i] += count[i - 1];
-
-    /* Build output array */
-    for (i = size - 1; i < size; i--)
-    {
-        output[count[(array[i] / exp) % 10] - 1] = array[i];
-        count[(array[i] / exp) % 10]--;
-    }
-
-    /* Copy back to original array */
-    for (i = 0; i < size; i++)
-        array[i] = output[i];
-
-    free(output);
-    free(count);
-}
-
-/**
- * radix_sort - Sorts an array of integers in ascending order using Radix sort
- * @array: Array to be sorted
- * @size: Size of the array
- */
-void radix_sort(int *array, size_t size)
-{
-    int max, exp;
-
-    if (!array || size < 2)
+    if (!array || size < 2 || (size & (size - 1)) != 0)
         return;
 
-    max = get_max(array, size);
-
-    for (exp = 1; max / exp > 0; exp *= 10)
-    {
-        counting_sort_radix(array, size, exp);
-        print_array(array, size);
-    }
+    bitonic_sequence(array, 0, size, 1, size);
 }
